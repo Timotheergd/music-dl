@@ -1,0 +1,61 @@
+# --- Project Specific ---
+# Ignore the actual music and lyrics downloaded
+downloads/
+songs.txt
+
+# Ignore logs (unless you want to commit a specific log for debugging)
+*.log
+debug.log
+
+# --- Python ---
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.env
+.venv
+
+# --- Docker ---
+# Ignore local docker config if any
+.docker/
+
+# --- OS Generated Files ---
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*

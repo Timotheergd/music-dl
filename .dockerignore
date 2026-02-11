@@ -1,0 +1,5 @@
+downloads/
+.git/
+__pycache__/
+*.mp3
+*.lrc

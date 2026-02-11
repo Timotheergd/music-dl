@@ -1,0 +1,38 @@
+import os
+
+# Paths
+DOWNLOAD_DIR = "/app/downloads"
+SONG_LIST = "songs.txt"
+
+# Network Settings
+TIMEOUT = 10
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/91.0.4472.124 Safari/537.36"
+)
+
+# API Endpoints
+LRCLIB_URL = "https://lrclib.net/api/get"
+NETEASE_SEARCH_URL = "http://music.163.com/api/search/get/web"
+NETEASE_LYRIC_URL = "http://music.163.com/api/song/lyric"
+QQ_SEARCH_URL = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp"
+QQ_LYRIC_URL = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg"
+MEGALYRICS_URL = "http://api.megalyrics.net/xmlserver.php"
+GECIMI_URL = "https://gecimi.com/api/lyric"
+OVH_URL = "https://api.lyrics.ovh/v1"
+
+# Metadata Cleaning
+JUNK_KEYWORDS = [
+    r'\(Official Music Video\)', r'\(Official Video\)', r'\(Official Audio\)',
+    r'\(Lyric Video\)', r'\(Lyrics\)', r'\[HQ\]', r'\[HD\]', r'\[4K\]',
+    r'\(Remastered\)', r'\(Live\)', r'\(Video\)', r'Official Music Video',
+    r'Official Video', r'VEVO', r'- Topic'
+]
+
+# Junk Uploaders (The "stereomusicvideo" fix)
+JUNK_UPLOADERS = ['vevo', 'official', 'records', 'music', 'video', 'stereo', 'channel', 'topic']
+
+# Logging
+ENABLE_LOGGING = False  # Set to True to enable
+LOG_FILE = "debug.log"
