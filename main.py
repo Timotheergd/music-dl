@@ -85,41 +85,35 @@ def process_existing_library(engine):
 def parse_song_list(filepath):
     """
     Parses songs.txt with support for:
-    - Comments (//)
+    - Comments (//) ONLY if preceded by whitespace or at start
     - Folder structure (#, ##)
     Returns a list of tuples: (song_query, target_folder_path)
     """
     tasks = []
-    # Stack to keep track of nested folders
-    # Example: ['Rock', 'Classic']
     folder_stack = []
 
     with open(filepath, "r", encoding="utf-8") as f:
         for line in f:
-            # 1. Strip comments (//) and whitespace
-            if '//' in line:
-                line = line.split('//')[0]
-            line = line.strip()
+            # 1. Smart Comment Stripping
+            # We only split if we see " //" (space before) or if the line starts with "//"
+            # This preserves "https://..." links
+            if ' // ' in line:
+                line = line.split(' // ')[0]
+            elif line.strip().startswith('//'):
+                continue
 
+            line = line.strip()
             if not line: continue
 
             # 2. Handle Folder Structure (#)
             if line.startswith('#'):
-                # Count hashtags to determine depth (Level 1, 2, etc.)
                 depth = len(line) - len(line.lstrip('#'))
                 folder_name = line.lstrip('#').strip()
-
-                # Adjust stack based on depth
-                # If depth is 1, we clear stack and start new
-                # If depth is 2, we keep the first parent
-                # Logic: Keep the first (depth-1) items
                 folder_stack = folder_stack[:depth-1]
                 folder_stack.append(folder_name)
 
             # 3. Handle Song
             else:
-                # Construct full path based on current stack
-                # If stack is empty, it goes to root DOWNLOAD_DIR
                 if folder_stack:
                     target_path = os.path.join(config.DOWNLOAD_DIR, *folder_stack)
                 else:

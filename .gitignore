@@ -1,7 +1,7 @@
 # --- Project Specific ---
 # Ignore the actual music and lyrics downloaded
-downloads/
-songs.txt
+downloads*/
+songs*.txt
 
 # Ignore logs (unless you want to commit a specific log for debugging)
 *.log

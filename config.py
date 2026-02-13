@@ -12,6 +12,9 @@ USER_AGENT = (
     "Chrome/91.0.4472.124 Safari/537.36"
 )
 
+# Download Mode
+DOWNLOAD_VIDEO = False  # Set to True to download Video (MP4) instead of Audio (MP3)
+
 # API Endpoints
 LRCLIB_URL = "https://lrclib.net/api/get"
 NETEASE_SEARCH_URL = "http://music.163.com/api/search/get/web"

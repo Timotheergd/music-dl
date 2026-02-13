@@ -96,6 +96,15 @@ docker build -t music-dl . && docker run -it -v $(pwd)/downloads:/app/downloads 
 
 You can tweak internal settings by editing the `config.py` file.
 
+### Downloading Video instead of Audio
+By default, music-dl downloads MP3 audio. If you want to download the **Music Video** (Best Quality MP4) instead:
+
+1.  Open `config.py`.
+2.  Change `DOWNLOAD_VIDEO = False` to `DOWNLOAD_VIDEO = True`.
+3.  Run the script.
+
+*Note: When in Video mode, lyrics are saved as `.srt` and `.lrc` files next to the video, but they are not embedded inside the video file itself.*
+
 ### Logging / Debugging
 If the script is crashing or behaving unexpectedly, you can enable logging to generate a detailed report.
 
