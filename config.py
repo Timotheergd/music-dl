@@ -42,7 +42,7 @@ JUNK_UPLOADERS = ['vevo', 'official', 'records', 'music', 'video', 'stereo', 'ch
 # 3: WARNING (Lyrics not found, blocked videos)
 # 4: INFO (Standard progress, default)
 # 5: DEBUG (FastSkip details, Registry Sync, internal logic)
-LOG_LEVEL = 4
+LOG_LEVEL = 5
 LOG_FILE = "debug.log"
 
 # Metadata Keys
@@ -59,3 +59,7 @@ VIDEO_FORMAT = "mp4"
 def get_extension():
     return VIDEO_FORMAT if DOWNLOAD_VIDEO else AUDIO_FORMAT
 
+# Image Settings
+IMAGE_SIZE = 600
+IMAGE_QUALITY = 80
+ITUNES_API_URL = "https://itunes.apple.com/search"

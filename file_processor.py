@@ -80,7 +80,7 @@ def embed_lyrics(file_path, lyrics_text):
         logger.log(2, f"   - [FileProcessor] Embedding error: {e}")
         return False
 
-def embed_metadata(file_path, lyrics=None, ytid=None):
+def embed_metadata(file_path, lyrics=None, ytid=None, cover_data=None):
     """Generic M4A metadata embedder."""
     try:
         # Prevent trying to embed in MP4 videos (Mutagen MP4 is for audio containers)
@@ -92,6 +92,11 @@ def embed_metadata(file_path, lyrics=None, ytid=None):
             audio['\xa9lyr'] = lyrics
         if ytid:
             audio[config.YTID_KEY] = ytid.encode('utf-8')
+
+        # Embed the image
+        if cover_data:
+            audio['covr'] = [MP4Cover(cover_data, imageformat=MP4Cover.FORMAT_JPEG)]
+
         audio.save()
         return True
     except Exception as e:

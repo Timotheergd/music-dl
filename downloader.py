@@ -5,6 +5,7 @@ import config
 import metadata_utils
 import file_processor
 import logger
+import cover_engine
 import re
 
 class Downloader:
@@ -39,12 +40,17 @@ class Downloader:
             }
 
         self.ydl_opts = {**self.base_opts, **self.mode_opts}
+        self.cover_engine = cover_engine.CoverEngine()
 
     def _extract_id_from_url(self, url):
         """Extracts the 11-char ID without hitting the network."""
         pattern = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
         match = re.search(pattern, url)
         return match.group(1) if match else None
+
+    def _is_playlist(self, query):
+        """Checks if the query is a YouTube playlist."""
+        return "list=" in query.lower()
 
     def process_query(self, query, target_folder=None):
         """
@@ -99,31 +105,27 @@ class Downloader:
                 for entry in video_list:
                     if not entry: continue
 
-                    # 1. INSTANT AVAILABILITY CHECK
-                    # yt-dlp returns these strings for restricted videos in flat scans
+                    # 1. Availability Check
                     title = entry.get('title', '')
                     if title in ['[Private video]', '[Deleted video]', None]:
-                        continue # Skip immediately, do not even check disk or ID
-
-                    ytid = entry.get('id')
-
-                    # Try to determine the filename from flat data
-                    target_ext = config.get_extension()
-                    temp_filename = ydl.prepare_filename(entry)
-                    final_file = os.path.splitext(temp_filename)[0] + f".{target_ext}"
-
-                    # INSTANT SKIP LOGIC
-                    if ytid in self.existing_ids or self.registry.is_downloaded(query, ytid) or os.path.exists(final_file):
-                        logger.log(5, f"{final_file} already exist")
                         continue
 
-                    # Only reach this for NEW items
-                    self._download_and_process_track(ydl, entry, query)
+                    # 2. THE FAST SKIP (The Fix)
+                    ytid = entry.get('id')
+
+                    # We check three things in order of speed:
+                    # - Is it in RAM (Disk Index)?
+                    # - Is it in the Registry by its ID?
+                    if ytid and (ytid in self.existing_ids or self.registry.is_downloaded(ytid)):
+                        continue
+
+                    # 3. Process only if not skipped
+                    self._download_and_process_track(ydl, entry, query, output_path)
                     time.sleep(1)
             except Exception as e:
                 logger.log(2, f"   - Track Error: {e}")
 
-    def _download_and_process_track(self, ydl, entry, original_query):
+    def _download_and_process_track(self, ydl, entry, original_query, output_path):
         """Internal method to handle a single track's lifecycle."""
         try:
             ytid = entry.get('id')
@@ -181,11 +183,16 @@ class Downloader:
             logger.log(4, f"   - Downloading: {artist} - {title}")
             ydl.process_info(video)
 
+            album = video.get('album', 'Unknown')
+            yt_thumb = video.get('thumbnail')
+
+            cover_data = self.cover_engine.get_cover(artist, title, album, output_path, yt_thumb)
+
             # Lyrics Retrieval
             lyrics = self.lyrics_engine.search(artist, title, duration)
 
             # Embed both Lyrics (if found) AND the YTID
-            file_processor.embed_metadata(final_file, lyrics=lyrics, ytid=ytid)
+            file_processor.embed_metadata(final_file, lyrics=lyrics, ytid=ytid, cover_data=cover_data)
 
             # Add to master list so we don't download it twice in the same session
             self.existing_ids.add(ytid)
@@ -212,9 +219,27 @@ class Downloader:
             else:
                 logger.log(3, f"   - No lyrics found for: {title}")
 
-             # 4. Update Registry after success
-            self.registry.add(original_query, ytid)
+            # 4. Update Registry
+            if self._is_playlist(original_query):
+                # For playlists, we register the ID as the key
+                # This ensures the skip check in process_query works instantly
+                self.registry.add(ytid, ytid)
+            else:
+                # For single songs, we register both the search string and the ID
+                self.registry.add(original_query, ytid)
+
+            self.existing_ids.add(ytid)
             self.registry.save()
+
+            # Extract Album Name (Used for cache fingerprinting)
+            album = video.get('album', 'Unknown')
+            yt_thumb = video.get('thumbnail')
+
+            # Get Cover
+            cover_data = self.cover_engine.get_cover(artist, title, album, output_path, yt_thumb)
+
+            # Embed everything
+            file_processor.embed_metadata(final_file, lyrics=lyrics, ytid=ytid, cover_data=cover_data)
 
         except Exception as e:
             logger.log(2, f"   - Track Error: {e}")

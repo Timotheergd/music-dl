@@ -3,7 +3,7 @@ FROM python:3.10-slim
 
 # 2. System Layer (The HEAVIEST part - stays cached forever)
 RUN apt-get update && \
-    apt-get install -y ffmpeg nodejs && \
+    apt-get install -y ffmpeg nodejs libjpeg-dev zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # 3. Setup workspace
@@ -23,6 +23,8 @@ COPY metadata_utils.py .
 COPY downloader.py .
 COPY lyrics_engine.py .
 COPY registry.py .
+COPY ./cover_engine.py .
+COPY ./image_processor.py .
 
 # 6. Create storage
 RUN mkdir -p /app/downloads

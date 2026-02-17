@@ -21,12 +21,23 @@ class Registry:
             json.dump(self.data, f)
 
     def is_downloaded(self, query, ytid=None):
-        # 1. Check if the exact query/URL was already successful
+        """
+        Flexible check:
+        - If ytid is provided: Checks query OR ytid.
+        - If only one arg provided: Checks if that arg exists as a key OR a value.
+        """
+        # Check if the query itself is a known key (Search string or ID)
         if query in self.data["queries"]:
             return True
-        # 2. Check if the ID exists
+
+        # Check if the ID exists in the master ID list
         if ytid and ytid in self.data["ids"]:
             return True
+
+        # Fallback: if 'query' is actually an ID passed as the first arg
+        if query in self.data["ids"]:
+            return True
+
         return False
 
     def add(self, query, ytid):
@@ -48,6 +59,9 @@ class Registry:
         # We create a new dictionary to avoid "RuntimeError: dictionary changed size during iteration"
         new_queries = {}
         for query, ytid in self.data["queries"].items():
+            # Remove any existing entries that are playlist URLs
+            if "list=" in query.lower():
+                continue
             if ytid in existing_ids:
                 new_queries[query] = ytid
 
