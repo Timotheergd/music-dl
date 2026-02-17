@@ -3,6 +3,7 @@ import re
 import base64
 import xml.etree.ElementTree as ET
 import config
+import logger
 
 class LyricsEngine:
     def __init__(self):
@@ -17,12 +18,12 @@ class LyricsEngine:
         # 1. Deduplicate: Prevent "Artist - Artist - Song"
         if artist.lower() in title.lower():
             title = re.sub(re.escape(artist), '', title, flags=re.IGNORECASE).strip(' -–—|')
-        
+
         # 2. Final Safety: If artist is Unknown, try to split title
         if artist.lower() == "unknown" and " - " in title:
             artist, title = title.split(" - ", 1)
 
-        print(f"   - [Lyrics] Searching for: '{artist} - {title}' ({duration}s)")
+        logger.log(4, f"   - [Lyrics] Searching for: '{artist} - {title}' ({duration}s)")
 
         # Strategy Chain
         strategies = [
@@ -36,13 +37,13 @@ class LyricsEngine:
 
         for name, func, args in strategies:
             try:
-                print(f"     > Checking {name}...")
+                logger.log(5, f"     > Checking {name}...")
                 result = func(*args)
                 if result:
                     return result
             except Exception as e:
                 continue # Move to next strategy on failure
-        
+
         return None
 
     def _get_lrclib(self, artist, title, duration):

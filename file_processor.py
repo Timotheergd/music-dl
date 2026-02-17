@@ -1,6 +1,7 @@
 import os
 import re
 import config
+import logger
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.id3 import ID3, USLT, TXXX, Encoding
@@ -76,7 +77,7 @@ def embed_lyrics(file_path, lyrics_text):
         audio.save()
         return True
     except Exception as e:
-        print(f"   - [FileProcessor] Embedding error: {e}")
+        logger.log(2, f"   - [FileProcessor] Embedding error: {e}")
         return False
 
 def embed_metadata(file_path, lyrics=None, ytid=None):
@@ -94,7 +95,7 @@ def embed_metadata(file_path, lyrics=None, ytid=None):
         audio.save()
         return True
     except Exception as e:
-        print(f"   - [FileProcessor] Metadata error: {e}")
+        logger.log(2, f"   - [FileProcessor] Metadata error: {e}")
         return False
 
 def extract_ytid(file_path):

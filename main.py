@@ -19,7 +19,7 @@ def extract_embedded_lyrics(audio_path):
     return None
 
 def build_id_index():
-    print("Indexing existing library by ID...")
+    logger.log(4, "Indexing existing library by ID...")
     id_set = set()
     ext = f".{config.AUDIO_FORMAT}"
     for root, dirs, files in os.walk(config.DOWNLOAD_DIR):
@@ -27,7 +27,7 @@ def build_id_index():
             if f.endswith(ext):
                 ytid = file_processor.extract_ytid(os.path.join(root, f))
                 if ytid: id_set.add(ytid)
-    print(f"Index complete. {len(id_set)} unique IDs found.")
+    logger.log(4, f"Index complete. {len(id_set)} unique IDs found.")
     return id_set
 
 
@@ -40,9 +40,9 @@ def process_existing_library(engine):
     3. Search Online
     Then ensures .lrc, .srt, and embedded tags all exist.
     """
-    print("\n" + "="*40)
-    print("SCANNING EXISTING LIBRARY (M4A)")
-    print("="*40)
+    logger.log(4, "\n" + "="*40)
+    logger.log(4, "SCANNING EXISTING LIBRARY (M4A)")
+    logger.log(4, "="*40)
 
     if not os.path.exists(config.DOWNLOAD_DIR):
         return
@@ -63,7 +63,7 @@ def process_existing_library(engine):
             missing_srt = not os.path.exists(srt_path)
 
             if missing_lrc or missing_srt:
-                print(f"\n[Library Check]: {filename}")
+                logger.log(4, f"\n[Library Check]: {filename}")
                 lyrics_text = None
                 source = "Unknown"
 
@@ -97,23 +97,23 @@ def process_existing_library(engine):
                         if artist == "Unknown" or title == "Unknown":
                             artist, title = metadata_utils.parse_filename_robustly(filename)
 
-                        print(f"   - Lyrics missing locally. Searching online...")
+                        logger.log(3, f"   - Lyrics missing locally. Searching online...")
                         lyrics_text = engine.search(artist, title, duration)
                         if lyrics_text:
                             source = "Online Search"
                             time.sleep(1.0) # API Cooldown
                     except Exception as e:
-                        print(f"   - Error reading M4A metadata: {e}")
+                        logger.log(2, f"   - Error reading M4A metadata: {e}")
 
                 # 4. Finalize: Write whatever is missing
                 if lyrics_text:
-                    print(f"   - Found lyrics via: {source}")
+                    logger.log(4, f"   - Found lyrics via: {source}")
 
                     # Write LRC if missing
                     if missing_lrc:
                         with open(lrc_path, "w", encoding="utf-8") as f:
                             f.write(lyrics_text)
-                        print("   - Generated missing .lrc file")
+                        logger.log(4, "   - Generated missing .lrc file")
 
                     # Write SRT if missing
                     if missing_srt:
@@ -121,12 +121,12 @@ def process_existing_library(engine):
                         if srt_content:
                             with open(srt_path, "w", encoding="utf-8") as f:
                                 f.write(srt_content)
-                            print("   - Generated missing .srt file")
+                            logger.log(4, "   - Generated missing .srt file")
 
                     # Always re-embed to ensure compatibility
                     file_processor.embed_lyrics(audio_path, lyrics_text)
                 else:
-                    print("   - Still no lyrics found.")
+                    logger.log(3, f"   - Still no lyrics found. for {title}-{artist}")
 
 def parse_song_list(filepath):
     """
@@ -195,21 +195,21 @@ def main():
     if os.path.exists(config.SONG_LIST):
         tasks = parse_song_list(config.SONG_LIST)
         if tasks:
-            print(f"Found {len(tasks)} items to process.")
+            logger.log(4, f"Found {len(tasks)} items to process.")
             for query, target_folder in tasks:
                 dl.process_query(query, target_folder)
         else:
-            print(f"{config.SONG_LIST} is empty.")
+            logger.log(3, f"{config.SONG_LIST} is empty.")
     else:
         # This will now ONLY print if the file is missing
-        print(f"Warning: {config.SONG_LIST} not found.")
+        logger.log(3, f"Warning: {config.SONG_LIST} not found.")
 
     # Scan library (Recursive)
     process_existing_library(engine)
 
-    print("\n" + "="*40)
-    print("ALL TASKS COMPLETE")
-    print("="*40)
+    logger.log(4, "\n" + "="*40)
+    logger.log(4, "ALL TASKS COMPLETE")
+    logger.log(4, "="*40)
 
 if __name__ == "__main__":
     main()

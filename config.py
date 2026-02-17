@@ -35,8 +35,14 @@ JUNK_KEYWORDS = [
 # Junk Uploaders (The "stereomusicvideo" fix)
 JUNK_UPLOADERS = ['vevo', 'official', 'records', 'music', 'video', 'stereo', 'channel', 'topic']
 
-# Logging
-ENABLE_LOGGING = False  # Set to True to enable
+# Logging Levels:
+# 0: OFF (Mute everything)
+# 1: CRITICAL (Only system crashes)
+# 2: ERROR (Download failures)
+# 3: WARNING (Lyrics not found, blocked videos)
+# 4: INFO (Standard progress, default)
+# 5: DEBUG (FastSkip details, Registry Sync, internal logic)
+LOG_LEVEL = 4
 LOG_FILE = "debug.log"
 
 # Metadata Keys

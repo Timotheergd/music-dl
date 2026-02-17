@@ -4,6 +4,7 @@ import yt_dlp
 import config
 import metadata_utils
 import file_processor
+import logger
 import re
 
 class Downloader:
@@ -53,18 +54,18 @@ class Downloader:
         # 1. INSTANT CHECK: Registry
         # If the exact text "Adele - Hello" or the URL is in our JSON, skip now.
         if self.registry.is_downloaded(query):
-            print(f"   - [FastSkip] Query '{query}' already in registry.")
+            logger.log(4, f"   - [FastSkip] Query '{query}' already in registry.")
             return
 
         # 2. INSTANT CHECK: URL Regex
         if query.startswith('http'):
             ytid = self._extract_id_from_url(query)
             if ytid and self.registry.is_downloaded(query, ytid):
-                print(f"   - [FastSkip] ID {ytid} already in registry.")
+                logger.log(5, f"   - [FastSkip] ID {ytid} already in registry.")
                 return
 
         # 3. NETWORK CALL (Only if the two checks above fail)
-        print(f"\n[Downloader] Processing: {query}")
+        logger.log(4, f"\n[Downloader] Processing: {query}")
 
         # 1. Determine Output Path
         # If main.py sent a folder, use it. Otherwise use default.
@@ -89,11 +90,11 @@ class Downloader:
 
                 info = ydl.extract_info(search_query, download=False)
                 if not info:
-                    print(f"   - Could not access: {query}")
+                    logger.log(3, f"   - Could not access: {query}")
                     return
 
                 video_list = info['entries'] if 'entries' in info else [info]
-                print(f"   - Found {len(video_list)} potential track(s).")
+                logger.log(4, f"   - Found {len(video_list)} potential track(s).")
 
                 for entry in video_list:
                     if not entry: continue
@@ -113,14 +114,14 @@ class Downloader:
 
                     # INSTANT SKIP LOGIC
                     if ytid in self.existing_ids or self.registry.is_downloaded(query, ytid) or os.path.exists(final_file):
-                        # Silent skip for existing items
+                        logger.log(5, f"{final_file} already exist")
                         continue
 
                     # Only reach this for NEW items
                     self._download_and_process_track(ydl, entry, query)
                     time.sleep(1)
             except Exception as e:
-                print(f"   - Critical Downloader Error: {e}")
+                logger.log(2, f"   - Track Error: {e}")
 
     def _download_and_process_track(self, ydl, entry, original_query):
         """Internal method to handle a single track's lifecycle."""
@@ -146,7 +147,7 @@ class Downloader:
                 return # SKIP NOW before calling extract_info
 
             # 3. NETWORK CALL (Only reached if file does NOT exist on disk)
-            print(f"   - [Network] Fetching metadata: {ytid}")
+            logger.log(4, f"   - [Network] Fetching metadata: {ytid}")
             video_url = entry.get('webpage_url') or entry.get('url') or f"https://www.youtube.com/watch?v={ytid}"
             video = ydl.extract_info(video_url, download=False)
 
@@ -155,7 +156,7 @@ class Downloader:
                 if entry.get('id'):
                     video_url = f"https://www.youtube.com/watch?v={entry['id']}"
                 else:
-                    print(f"   - Error: Could not determine video URL.")
+                    logger.log(2, f"   - Error: Could not determine video URL.{video_url}")
                     return
 
             # Fetch full metadata (needed because of extract_flat)
@@ -173,11 +174,11 @@ class Downloader:
             final_file = os.path.splitext(temp_filename)[0] + f".{target_ext}"
 
             if os.path.exists(final_file):
-                print(f"   - Skipping: '{os.path.basename(final_file)}' already exists.")
+                logger.log(4, f"   - Skipping: '{os.path.basename(final_file)}' already exists.")
                 return
 
             # Actual Download
-            print(f"   - Downloading: {artist} - {title}")
+            logger.log(4, f"   - Downloading: {artist} - {title}")
             ydl.process_info(video)
 
             # Lyrics Retrieval
@@ -205,15 +206,15 @@ class Downloader:
                 # Embed (Audio Only)
                 if not config.DOWNLOAD_VIDEO:
                     file_processor.embed_lyrics(final_file, lyrics)
-                    print(f"   - Success: Audio and Lyrics processed.")
+                    logger.log(4, f"   - Success: Audio and Lyrics processed.")
                 else:
-                    print(f"   - Success: Video downloaded. Lyrics saved externally.")
+                    logger.log(4, f"   - Success: Video downloaded. Lyrics saved externally.")
             else:
-                print(f"   - No lyrics found for: {title}")
+                logger.log(3, f"   - No lyrics found for: {title}")
 
              # 4. Update Registry after success
             self.registry.add(original_query, ytid)
             self.registry.save()
 
         except Exception as e:
-            print(f"   - Track Error: {e}")
+            logger.log(2, f"   - Track Error: {e}")

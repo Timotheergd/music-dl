@@ -1,6 +1,7 @@
 import json
 import os
 import config
+import logger
 
 class Registry:
     def __init__(self):
@@ -54,5 +55,5 @@ class Registry:
 
         removed = initial_count - len(self.data["ids"])
         if removed > 0:
-            print(f"   - Registry Sync: Removed {removed} entries for missing files.")
+            logger.log(4, f"   - Registry Sync: Removed {removed} entries for missing files.")
             self.save()
