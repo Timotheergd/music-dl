@@ -4,10 +4,13 @@ import yt_dlp
 import config
 import metadata_utils
 import file_processor
+import re
 
 class Downloader:
-    def __init__(self, lyrics_engine):
+    def __init__(self, lyrics_engine, registry, existing_ids):
         self.lyrics_engine = lyrics_engine
+        self.registry = registry
+        self.existing_ids = existing_ids
 
         self.base_opts = {
             'noplaylist': False,
@@ -36,11 +39,31 @@ class Downloader:
 
         self.ydl_opts = {**self.base_opts, **self.mode_opts}
 
+    def _extract_id_from_url(self, url):
+        """Extracts the 11-char ID without hitting the network."""
+        pattern = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
+        match = re.search(pattern, url)
+        return match.group(1) if match else None
+
     def process_query(self, query, target_folder=None):
         """
         Handles a single URL/Search.
         target_folder: The specific subfolder (e.g. /app/downloads/Rock)
         """
+        # 1. INSTANT CHECK: Registry
+        # If the exact text "Adele - Hello" or the URL is in our JSON, skip now.
+        if self.registry.is_downloaded(query):
+            print(f"   - [FastSkip] Query '{query}' already in registry.")
+            return
+
+        # 2. INSTANT CHECK: URL Regex
+        if query.startswith('http'):
+            ytid = self._extract_id_from_url(query)
+            if ytid and self.registry.is_downloaded(query, ytid):
+                print(f"   - [FastSkip] ID {ytid} already in registry.")
+                return
+
+        # 3. NETWORK CALL (Only if the two checks above fail)
         print(f"\n[Downloader] Processing: {query}")
 
         # 1. Determine Output Path
@@ -74,18 +97,58 @@ class Downloader:
 
                 for entry in video_list:
                     if not entry: continue
-                    self._download_and_process_track(ydl, entry)
-                    time.sleep(1.5)
 
+                    # 1. INSTANT AVAILABILITY CHECK
+                    # yt-dlp returns these strings for restricted videos in flat scans
+                    title = entry.get('title', '')
+                    if title in ['[Private video]', '[Deleted video]', None]:
+                        continue # Skip immediately, do not even check disk or ID
+
+                    ytid = entry.get('id')
+
+                    # Try to determine the filename from flat data
+                    target_ext = config.get_extension()
+                    temp_filename = ydl.prepare_filename(entry)
+                    final_file = os.path.splitext(temp_filename)[0] + f".{target_ext}"
+
+                    # INSTANT SKIP LOGIC
+                    if ytid in self.existing_ids or self.registry.is_downloaded(query, ytid) or os.path.exists(final_file):
+                        # Silent skip for existing items
+                        continue
+
+                    # Only reach this for NEW items
+                    self._download_and_process_track(ydl, entry, query)
+                    time.sleep(1)
             except Exception as e:
                 print(f"   - Critical Downloader Error: {e}")
 
-    def _download_and_process_track(self, ydl, entry):
+    def _download_and_process_track(self, ydl, entry, original_query):
         """Internal method to handle a single track's lifecycle."""
         try:
-            # FIX: Robustly get the URL or ID to extract full metadata
-            # Search results have 'url', direct links have 'webpage_url' or 'id'
-            video_url = entry.get('webpage_url') or entry.get('url')
+            ytid = entry.get('id')
+            if not ytid: return
+
+            # 1. Check RAM/Registry (Instant)
+            if ytid in self.existing_ids or self.registry.is_downloaded(original_query, ytid):
+                return
+
+            # 2. Check Disk (Instant - No Network)
+            # We use prepare_filename on the 'entry' (flat data)
+            target_ext = config.get_extension()
+            temp_filename = ydl.prepare_filename(entry)
+            final_file = os.path.splitext(temp_filename)[0] + f".{target_ext}"
+
+            if os.path.exists(final_file):
+                # Update our indexes so we skip even faster next time
+                self.existing_ids.add(ytid)
+                self.registry.add(original_query, ytid)
+                self.registry.save()
+                return # SKIP NOW before calling extract_info
+
+            # 3. NETWORK CALL (Only reached if file does NOT exist on disk)
+            print(f"   - [Network] Fetching metadata: {ytid}")
+            video_url = entry.get('webpage_url') or entry.get('url') or f"https://www.youtube.com/watch?v={ytid}"
+            video = ydl.extract_info(video_url, download=False)
 
             if not video_url:
                 # Fallback: Construct URL from ID if possible
@@ -103,12 +166,10 @@ class Downloader:
             artist, title = metadata_utils.extract_professional_metadata(video)
             duration = video.get('duration', 0)
 
-            # Determine expected extension based on config
-            target_ext = "mp4" if config.DOWNLOAD_VIDEO else "mp3"
+            # Use generic extensions from config
+            target_ext = config.get_extension()
 
-            # Check if file already exists
             temp_filename = ydl.prepare_filename(video)
-            # yt-dlp might return .webm/.mkv, so we strip extension and add ours
             final_file = os.path.splitext(temp_filename)[0] + f".{target_ext}"
 
             if os.path.exists(final_file):
@@ -121,6 +182,13 @@ class Downloader:
 
             # Lyrics Retrieval
             lyrics = self.lyrics_engine.search(artist, title, duration)
+
+            # Embed both Lyrics (if found) AND the YTID
+            file_processor.embed_metadata(final_file, lyrics=lyrics, ytid=ytid)
+
+            # Add to master list so we don't download it twice in the same session
+            self.existing_ids.add(ytid)
+
             if lyrics:
                 base_path = os.path.splitext(final_file)[0]
 
@@ -142,6 +210,10 @@ class Downloader:
                     print(f"   - Success: Video downloaded. Lyrics saved externally.")
             else:
                 print(f"   - No lyrics found for: {title}")
+
+             # 4. Update Registry after success
+            self.registry.add(original_query, ytid)
+            self.registry.save()
 
         except Exception as e:
             print(f"   - Track Error: {e}")

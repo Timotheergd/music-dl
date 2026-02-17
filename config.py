@@ -12,8 +12,6 @@ USER_AGENT = (
     "Chrome/91.0.4472.124 Safari/537.36"
 )
 
-# Download Mode
-DOWNLOAD_VIDEO = False  # Set to True to download Video (MP4) instead of Audio (MP3)
 
 # API Endpoints
 LRCLIB_URL = "https://lrclib.net/api/get"
@@ -30,7 +28,8 @@ JUNK_KEYWORDS = [
     r'\(Official Music Video\)', r'\(Official Video\)', r'\(Official Audio\)',
     r'\(Lyric Video\)', r'\(Lyrics\)', r'\[HQ\]', r'\[HD\]', r'\[4K\]',
     r'\(Remastered\)', r'\(Live\)', r'\(Video\)', r'Official Music Video',
-    r'Official Video', r'VEVO', r'- Topic'
+    r'Official Video', r'VEVO', r'- Topic',
+    r'(?i)\bby\b', r'(?i)\bpar\b'
 ]
 
 # Junk Uploaders (The "stereomusicvideo" fix)
@@ -40,5 +39,17 @@ JUNK_UPLOADERS = ['vevo', 'official', 'records', 'music', 'video', 'stereo', 'ch
 ENABLE_LOGGING = False  # Set to True to enable
 LOG_FILE = "debug.log"
 
+# Metadata Keys
+YTID_KEY = "----:com.apple.iTunes:YTID"
+
+REGISTRY_FILE = ".registry.json"
+
 # File Format
+DOWNLOAD_VIDEO = False  # Set to True to download Video (MP4) instead of Audio (MP3)
 AUDIO_FORMAT = "m4a"
+VIDEO_FORMAT = "mp4"
+
+# Logic helper
+def get_extension():
+    return VIDEO_FORMAT if DOWNLOAD_VIDEO else AUDIO_FORMAT
+

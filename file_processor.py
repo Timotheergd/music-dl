@@ -1,5 +1,6 @@
 import os
 import re
+import config
 from mutagen.mp3 import MP3
 from mutagen.mp4 import MP4, MP4Cover
 from mutagen.id3 import ID3, USLT, TXXX, Encoding
@@ -77,3 +78,31 @@ def embed_lyrics(file_path, lyrics_text):
     except Exception as e:
         print(f"   - [FileProcessor] Embedding error: {e}")
         return False
+
+def embed_metadata(file_path, lyrics=None, ytid=None):
+    """Generic M4A metadata embedder."""
+    try:
+        # Prevent trying to embed in MP4 videos (Mutagen MP4 is for audio containers)
+        if file_path.endswith(".mp4") and config.DOWNLOAD_VIDEO:
+            return False
+
+        audio = MP4(file_path)
+        if lyrics:
+            audio['\xa9lyr'] = lyrics
+        if ytid:
+            audio[config.YTID_KEY] = ytid.encode('utf-8')
+        audio.save()
+        return True
+    except Exception as e:
+        print(f"   - [FileProcessor] Metadata error: {e}")
+        return False
+
+def extract_ytid(file_path):
+    """Reads the hidden YouTube ID from an M4A file."""
+    try:
+        audio = MP4(file_path)
+        if config.YTID_KEY in audio:
+            return audio[config.YTID_KEY][0].decode('utf-8')
+    except:
+        pass
+    return None

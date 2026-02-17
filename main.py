@@ -6,20 +6,30 @@ import metadata_utils
 import lyrics_engine
 import downloader
 import file_processor
-from mutagen.mp3 import MP3
-from mutagen.id3 import ID3
+import registry
+from mutagen.mp4 import MP4  # Ensure this is at the top of main.py
 
-def extract_embedded_lyrics(mp3_path):
-    """Helper to read USLT lyrics from an MP3 file."""
+def extract_embedded_lyrics(audio_path):
+    """Generic helper to read lyrics from M4A atoms."""
     try:
-        audio = MP3(mp3_path, ID3=ID3)
-        for key in audio.tags.keys():
-            if key.startswith('USLT'):
-                return audio.tags[key].text
+        audio = MP4(audio_path)
+        if '\xa9lyr' in audio:
+            return audio['\xa9lyr'][0]
     except: pass
     return None
 
-from mutagen.mp4 import MP4  # Ensure this is at the top of main.py
+def build_id_index():
+    print("Indexing existing library by ID...")
+    id_set = set()
+    ext = f".{config.AUDIO_FORMAT}"
+    for root, dirs, files in os.walk(config.DOWNLOAD_DIR):
+        for f in files:
+            if f.endswith(ext):
+                ytid = file_processor.extract_ytid(os.path.join(root, f))
+                if ytid: id_set.add(ytid)
+    print(f"Index complete. {len(id_set)} unique IDs found.")
+    return id_set
+
 
 def process_existing_library(engine):
     """
@@ -38,11 +48,10 @@ def process_existing_library(engine):
         return
 
     # Walk through all folders and subfolders
+    ext = f".{config.AUDIO_FORMAT}"
     for root, dirs, files in os.walk(config.DOWNLOAD_DIR):
         for filename in files:
-            # Only look for M4A files
-            if not filename.endswith('.m4a'):
-                continue
+            if not filename.endswith(ext): continue
 
             base_name = os.path.splitext(filename)[0]
             audio_path = os.path.join(root, filename)
@@ -80,7 +89,6 @@ def process_existing_library(engine):
                 if not lyrics_text:
                     try:
                         audio = MP4(audio_path)
-                        # Extract M4A metadata: \xa9ART = Artist, \xa9nam = Title
                         artist = audio.get('\xa9ART', ['Unknown'])[0]
                         title = audio.get('\xa9nam', ['Unknown'])[0]
                         duration = int(audio.info.length)
@@ -169,22 +177,34 @@ def main():
     # Ensure download directory exists
     if not os.path.exists(config.DOWNLOAD_DIR): os.makedirs(config.DOWNLOAD_DIR)
 
-    engine = lyrics_engine.LyricsEngine()
-    dl = downloader.Downloader(engine)
+    # Build the RAM index (Scans existing files)
+    existing_ids = build_id_index()
 
-    # 1. Parse the structured song list
+    # Load Registry (Instant)
+    reg = registry.Registry()
+
+    # Sync Registry with Disk
+    # This removes "phantom" entries for deleted files
+    reg.sync_with_disk(existing_ids)
+
+    # Initialize Engines
+    engine = lyrics_engine.LyricsEngine()
+    dl = downloader.Downloader(engine, reg, existing_ids)
+
+    # Process the structured song list
     if os.path.exists(config.SONG_LIST):
         tasks = parse_song_list(config.SONG_LIST)
-        print(f"Found {len(tasks)} items to process.")
-
-        for query, target_folder in tasks:
-            # Pass the specific folder to the downloader
-            dl.process_query(query, target_folder)
-            time.sleep(2)
+        if tasks:
+            print(f"Found {len(tasks)} items to process.")
+            for query, target_folder in tasks:
+                dl.process_query(query, target_folder)
+        else:
+            print(f"{config.SONG_LIST} is empty.")
     else:
+        # This will now ONLY print if the file is missing
         print(f"Warning: {config.SONG_LIST} not found.")
 
-    # 2. Scan library (Recursive)
+    # Scan library (Recursive)
     process_existing_library(engine)
 
     print("\n" + "="*40)

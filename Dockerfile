@@ -22,6 +22,7 @@ COPY file_processor.py .
 COPY metadata_utils.py .
 COPY downloader.py .
 COPY lyrics_engine.py .
+COPY registry.py .
 
 # 6. Create storage
 RUN mkdir -p /app/downloads

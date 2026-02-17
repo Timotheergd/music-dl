@@ -31,8 +31,9 @@ def extract_professional_metadata(info):
             artist = info.get('uploader', 'Unknown')
             title = video_title
 
-    # 3. Sanitization (The "stereomusicvideo" fix)
-    if any(junk in artist.lower() for junk in config.JUNK_UPLOADERS) and ' - ' in title:
+    # 3. Sanitization
+    # If the artist is the uploader, and the title contains "artist - title", split it.
+    if (" - " in title) and (artist.lower() in title.lower()):
         parts = re.split(r' [-–—|:] ', title, maxsplit=1)
         if len(parts) == 2:
             artist, title = parts[0], parts[1]
@@ -42,15 +43,15 @@ def extract_professional_metadata(info):
 def parse_filename_robustly(filename):
     """Guesses Artist and Title from a filename for library scans."""
     name = os.path.splitext(filename)[0]
-    
+
     # Try splitting by standard dash
     match = re.search(r'^(.*?) [-–—|] (.*)$', name)
     if match:
         return match.group(1).strip(), match.group(2).strip()
-    
+
     # Fallback for "Artist-Title"
     if "-" in name:
         parts = name.split("-")
         return parts[0].strip(), "-".join(parts[1:]).strip()
-        
+
     return "Unknown", name
