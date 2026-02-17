@@ -105,13 +105,17 @@ By default, music-dl downloads MP3 audio. If you want to download the **Music Vi
 
 *Note: When in Video mode, lyrics are saved as `.srt` and `.lrc` files next to the video, but they are not embedded inside the video file itself.*
 
-### Logging / Debugging
-If the script is crashing or behaving unexpectedly, you can enable logging to generate a detailed report.
+### Log Levels
+If you need to troubleshoot, you can adjust the `LOG_LEVEL` in `config.py`:
 
-1.  Open `config.py`.
-2.  Change `ENABLE_LOGGING = False` to `ENABLE_LOGGING = True`.
-3.  Run the script again.
-4.  A file named `debug.log` will appear in your `downloads` folder. You can read this file to see exactly what happened.
+*   **0**: Disabled.
+*   **1**: Critical - Only show system-breaking crashes.
+*   **2**: Error - Show failed downloads or search crashes.
+*   **3**: Warning - Show missing lyrics or blocked videos.
+*   **4**: Info (Default) - Standard progress and status.
+*   **5**: Debug - Full technical details (FastSkips, Registry syncs, etc).
+
+Logs are saved to `downloads/debug.log` if level is 1 or higher.
 
 ### Metadata Cleaning
 If you find that the script is not removing certain words from song titles (like "Official 4K Video"), you can add them to the `JUNK_KEYWORDS` list in `config.py`.
