@@ -39,3 +39,6 @@ JUNK_UPLOADERS = ['vevo', 'official', 'records', 'music', 'video', 'stereo', 'ch
 # Logging
 ENABLE_LOGGING = False  # Set to True to enable
 LOG_FILE = "debug.log"
+
+# File Format
+AUDIO_FORMAT = "m4a"

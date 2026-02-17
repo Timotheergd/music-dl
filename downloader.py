@@ -8,7 +8,7 @@ import file_processor
 class Downloader:
     def __init__(self, lyrics_engine):
         self.lyrics_engine = lyrics_engine
-        # Base options common to both modes
+
         self.base_opts = {
             'noplaylist': False,
             'ignoreerrors': True,
@@ -17,25 +17,23 @@ class Downloader:
             'no_warnings': True,
         }
 
-        # Mode-specific options
         if config.DOWNLOAD_VIDEO:
             self.mode_opts = {
-                'format': 'bestvideo+bestaudio/best', # Best quality
-                'merge_output_format': 'mp4',         # Ensure compatibility
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': 'mp4',
                 'outtmpl': f'{config.DOWNLOAD_DIR}/%(title)s.%(ext)s',
             }
         else:
+            # AUDIO MODE (M4A)
             self.mode_opts = {
-                'format': 'bestaudio/best',
+                'format': 'bestaudio[ext=m4a]/bestaudio/best', # Prefer native M4A
                 'outtmpl': f'{config.DOWNLOAD_DIR}/%(title)s.%(ext)s',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
+                    'preferredcodec': 'm4a', # Ensure container is M4A
                 }],
             }
 
-        # Merge options
         self.ydl_opts = {**self.base_opts, **self.mode_opts}
 
     def process_query(self, query, target_folder=None):

@@ -19,68 +19,106 @@ def extract_embedded_lyrics(mp3_path):
     except: pass
     return None
 
+from mutagen.mp4 import MP4  # Ensure this is at the top of main.py
+
 def process_existing_library(engine):
     """
-    Scans library RECURSIVELY (os.walk) to find missing lyrics in subfolders.
+    Scans library RECURSIVELY for M4A files.
+    Priority:
+    1. Use existing .lrc file
+    2. Use embedded M4A tags (©lyr)
+    3. Search Online
+    Then ensures .lrc, .srt, and embedded tags all exist.
     """
     print("\n" + "="*40)
-    print("SCANNING EXISTING LIBRARY (RECURSIVE)")
+    print("SCANNING EXISTING LIBRARY (M4A)")
     print("="*40)
 
-    if not os.path.exists(config.DOWNLOAD_DIR): return
+    if not os.path.exists(config.DOWNLOAD_DIR):
+        return
 
     # Walk through all folders and subfolders
     for root, dirs, files in os.walk(config.DOWNLOAD_DIR):
         for filename in files:
-            if not filename.endswith('.mp3'): continue
+            # Only look for M4A files
+            if not filename.endswith('.m4a'):
+                continue
 
             base_name = os.path.splitext(filename)[0]
-            mp3_path = os.path.join(root, filename)
+            audio_path = os.path.join(root, filename)
             lrc_path = os.path.join(root, base_name + ".lrc")
             srt_path = os.path.join(root, base_name + ".srt")
 
+            # Check if anything is missing
             missing_lrc = not os.path.exists(lrc_path)
             missing_srt = not os.path.exists(srt_path)
 
             if missing_lrc or missing_srt:
-                # ... (The rest of the scanning logic is identical to before) ...
-                # ... (Copy the logic from previous main.py here) ...
-                # For brevity, I will summarize the logic block:
                 print(f"\n[Library Check]: {filename}")
                 lyrics_text = None
+                source = "Unknown"
 
-                # 1. Check Local LRC
+                # 1. Try to read from existing .lrc file
                 if not missing_lrc:
                     try:
-                        with open(lrc_path, "r", encoding="utf-8") as f: lyrics_text = f.read()
+                        with open(lrc_path, "r", encoding="utf-8") as f:
+                            lyrics_text = f.read()
+                        source = "Local .lrc file"
                     except: pass
 
-                # 2. Check Embedded
-                if not lyrics_text: lyrics_text = extract_embedded_lyrics(mp3_path)
-
-                # 3. Search Online
+                # 2. If no .lrc, try to read from Embedded M4A Tags
                 if not lyrics_text:
                     try:
-                        audio = MP3(mp3_path, ID3=ID3)
-                        artist = str(audio.get('TPE1', 'Unknown'))
-                        title = str(audio.get('TIT2', 'Unknown'))
+                        audio = MP4(audio_path)
+                        # \xa9lyr is the iTunes atom for lyrics
+                        if '\xa9lyr' in audio:
+                            lyrics_text = audio['\xa9lyr'][0]
+                            source = "Embedded M4A Tags"
+                    except: pass
+
+                # 3. If still nothing, Search Online
+                if not lyrics_text:
+                    try:
+                        audio = MP4(audio_path)
+                        # Extract M4A metadata: \xa9ART = Artist, \xa9nam = Title
+                        artist = audio.get('\xa9ART', ['Unknown'])[0]
+                        title = audio.get('\xa9nam', ['Unknown'])[0]
                         duration = int(audio.info.length)
-                        if artist == "Unknown": artist, title = metadata_utils.parse_filename_robustly(filename)
 
+                        # Fallback to filename if tags are generic
+                        if artist == "Unknown" or title == "Unknown":
+                            artist, title = metadata_utils.parse_filename_robustly(filename)
+
+                        print(f"   - Lyrics missing locally. Searching online...")
                         lyrics_text = engine.search(artist, title, duration)
-                        if lyrics_text: time.sleep(1.0)
-                    except Exception as e: print(f"Error: {e}")
+                        if lyrics_text:
+                            source = "Online Search"
+                            time.sleep(1.0) # API Cooldown
+                    except Exception as e:
+                        print(f"   - Error reading M4A metadata: {e}")
 
-                # 4. Save
+                # 4. Finalize: Write whatever is missing
                 if lyrics_text:
+                    print(f"   - Found lyrics via: {source}")
+
+                    # Write LRC if missing
                     if missing_lrc:
-                        with open(lrc_path, "w", encoding="utf-8") as f: f.write(lyrics_text)
+                        with open(lrc_path, "w", encoding="utf-8") as f:
+                            f.write(lyrics_text)
+                        print("   - Generated missing .lrc file")
+
+                    # Write SRT if missing
                     if missing_srt:
-                        srt = file_processor.lrc_to_srt(lyrics_text)
-                        if srt:
-                            with open(srt_path, "w", encoding="utf-8") as f: f.write(srt)
-                    file_processor.embed_lyrics(mp3_path, lyrics_text)
-                    print("   - Fixed missing lyrics.")
+                        srt_content = file_processor.lrc_to_srt(lyrics_text)
+                        if srt_content:
+                            with open(srt_path, "w", encoding="utf-8") as f:
+                                f.write(srt_content)
+                            print("   - Generated missing .srt file")
+
+                    # Always re-embed to ensure compatibility
+                    file_processor.embed_lyrics(audio_path, lyrics_text)
+                else:
+                    print("   - Still no lyrics found.")
 
 def parse_song_list(filepath):
     """
