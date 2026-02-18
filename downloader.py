@@ -51,10 +51,11 @@ class Downloader:
         """Checks if the query is a YouTube playlist."""
         return "list=" in query.lower()
 
-    def process_query(self, query, target_folder=None):
+    def process_query(self, query, target_folder=None, override_mode=None):
         """
         Handles a single URL/Search.
         target_folder: The specific subfolder (e.g. /app/downloads/Rock)
+        override_mode: 'audio', 'video', or 'both'
         """
         # 1. INSTANT CHECK (Skip ONLY if NOT a playlist)
         if not self._is_playlist(query):
@@ -103,7 +104,7 @@ class Downloader:
 
                     # Process Track (Returns True if download happened)
                     # We pass 'ydl' but it won't be used for download, only for metadata if needed
-                    did_download = self._download_and_process_track(ydl, entry, query, output_path)
+                    did_download = self._download_and_process_track(ydl, entry, query, output_path, override_mode)
 
                     if did_download:
                         time.sleep(1)
@@ -111,7 +112,7 @@ class Downloader:
             except Exception as e:
                 logger.log(2, f"   - Critical Downloader Error: {e}")
 
-    def _download_and_process_track(self, ydl_unused, entry, original_query, output_path):
+    def _download_and_process_track(self, ydl_unused, entry, original_query, output_path, override_mode=None):
         """
         Internal method.
         Handles Audio, Video, or Both based on config.
@@ -121,7 +122,7 @@ class Downloader:
             if not ytid: return False
 
             # 1. Determine what we need to download
-            needed_exts = config.get_extensions()
+            needed_exts = config.get_extensions(override_mode)
             download_occurred = False
 
             # 2. Fetch Metadata (Once for all formats)

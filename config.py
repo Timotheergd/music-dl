@@ -56,18 +56,24 @@ REGISTRY_FILE = ".registry.json"
 
 # Download Mode
 # Options: "audio", "video", "both"
-DOWNLOAD_MODE = "both"
+DOWNLOAD_MODE = "audio"
 
 # File Formats
 AUDIO_FORMAT = "m4a"
 VIDEO_FORMAT = "mp4"
 
 # Logic helper (Updated)
-def get_extensions():
-    """Returns a list of extensions to check/download based on mode."""
-    if DOWNLOAD_MODE == "video":
+def get_extensions(override_mode=None):
+    """
+    Returns a list of extensions based on mode.
+    override_mode: 'audio', 'video', or 'both' (from songs.txt)
+    """
+    # Use override if provided, otherwise use global config
+    mode = override_mode if override_mode else DOWNLOAD_MODE
+
+    if mode == "video":
         return [VIDEO_FORMAT]
-    elif DOWNLOAD_MODE == "both":
+    elif mode == "both":
         return [AUDIO_FORMAT, VIDEO_FORMAT]
     return [AUDIO_FORMAT] # Default to audio
 

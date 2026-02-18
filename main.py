@@ -191,19 +191,18 @@ def process_existing_library(engine):
 
 def parse_song_list(filepath):
     """
-    Parses songs.txt with support for:
-    - Comments (//) ONLY if preceded by whitespace or at start
-    - Folder structure (#, ##)
-    Returns a list of tuples: (song_query, target_folder_path)
+    Parses songs.txt. Supports:
+    - Smart Comments ( // ) - ignores URLs
+    - Folder structure (#)
+    - Mode overrides ([video], [audio], [both])
     """
     tasks = []
     folder_stack = []
 
     with open(filepath, "r", encoding="utf-8") as f:
         for line in f:
-            # 1. Smart Comment Stripping
-            # We only split if we see " //" (space before) or if the line starts with "//"
-            # This preserves "https://..." links
+            # 1. Restore Smart Comment Stripping
+            # We only split if we see " // " (space before)
             if ' // ' in line:
                 line = line.split(' // ')[0]
             elif line.strip().startswith('//'):
@@ -212,21 +211,33 @@ def parse_song_list(filepath):
             line = line.strip()
             if not line: continue
 
-            # 2. Handle Folder Structure (#)
+            # 2. Handle Folder Structure
             if line.startswith('#'):
                 depth = len(line) - len(line.lstrip('#'))
                 folder_name = line.lstrip('#').strip()
                 folder_stack = folder_stack[:depth-1]
                 folder_stack.append(folder_name)
 
-            # 3. Handle Song
+            # 3. Handle Song & Overrides
             else:
+                mode = None
+                lower_line = line.lower()
+                if lower_line.endswith('[video]'):
+                    mode = 'video'
+                    line = line[:-7].strip()
+                elif lower_line.endswith('[audio]'):
+                    mode = 'audio'
+                    line = line[:-7].strip()
+                elif lower_line.endswith('[both]'):
+                    mode = 'both'
+                    line = line[:-6].strip()
+
                 if folder_stack:
                     target_path = os.path.join(config.DOWNLOAD_DIR, *folder_stack)
                 else:
                     target_path = config.DOWNLOAD_DIR
 
-                tasks.append((line, target_path))
+                tasks.append((line, target_path, mode))
 
     return tasks
 
@@ -257,8 +268,8 @@ def main():
         tasks = parse_song_list(config.SONG_LIST)
         if tasks:
             logger.log(4, f"Found {len(tasks)} items to process.")
-            for query, target_folder in tasks:
-                dl.process_query(query, target_folder)
+            for query, target_folder, mode in tasks:
+                dl.process_query(query, target_folder, mode)
         else:
             logger.log(3, f"{config.SONG_LIST} is empty.")
     else:

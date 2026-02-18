@@ -105,6 +105,21 @@ By default, music-dl downloads MP3 audio. If you want to download the **Music Vi
 
 *Note: When in Video mode, lyrics are saved as `.srt` and `.lrc` files next to the video, but they are not embedded inside the video file itself.*
 
+### Mode Overrides
+You can override the global download mode for specific songs by adding a tag at the end of the line:
+
+*   `[video]`: Download MP4 video.
+*   `[audio]`: Download M4A audio.
+*   `[both]`: Download both.
+
+**Example:**
+```text
+# Favorites
+Rick Astley - Never Gonna Give You Up [video] // I want to see the dance
+Daft Punk - Get Lucky [audio] // Just the music
+Michael Jackson - Thriller [both] // I need both versions
+```
+
 ### Log Levels
 If you need to troubleshoot, you can adjust the `LOG_LEVEL` in `config.py`:
 
