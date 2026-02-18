@@ -57,18 +57,22 @@ class Downloader:
         Handles a single URL/Search.
         target_folder: The specific subfolder (e.g. /app/downloads/Rock)
         """
-        # 1. INSTANT CHECK: Registry
-        # If the exact text "Adele - Hello" or the URL is in our JSON, skip now.
-        if self.registry.is_downloaded(query):
-            logger.log(4, f"   - [FastSkip] Query '{query}' already in registry.")
-            return
+        # 1. NEW CHECK: Is this a playlist?
+        is_playlist = "list=" in query.lower()
 
-        # 2. INSTANT CHECK: URL Regex
-        if query.startswith('http'):
-            ytid = self._extract_id_from_url(query)
-            if ytid and self.registry.is_downloaded(query, ytid):
-                logger.log(5, f"   - [FastSkip] ID {ytid} already in registry.")
+        # 2. INSTANT CHECK (Skip ONLY if NOT a playlist)
+        if not is_playlist:
+            # Check for direct query string
+            if self.registry.is_downloaded(query):
+                logger.log(5, f"   - [FastSkip] Query '{query}' already in registry.")
                 return
+
+            # Check for ID extracted from url
+            if query.startswith('http'):
+                ytid = self._extract_id_from_url(query)
+                if ytid and self.registry.is_downloaded(query, ytid):
+                    logger.log(5, f"   - [FastSkip] ID {ytid} already in registry.")
+                    return
 
         # 3. NETWORK CALL (Only if the two checks above fail)
         logger.log(4, f"\n[Downloader] Processing: {query}")
@@ -120,20 +124,24 @@ class Downloader:
                         continue
 
                     # 3. Process only if not skipped
-                    self._download_and_process_track(ydl, entry, query, output_path)
-                    time.sleep(1)
+                    did_download = self._download_and_process_track(ydl, entry, query, output_path)
+
+                    if did_download:
+                        time.sleep(1) # Only sleep if we actually hit the network
+
             except Exception as e:
                 logger.log(2, f"   - Track Error: {e}")
 
     def _download_and_process_track(self, ydl, entry, original_query, output_path):
         """Internal method to handle a single track's lifecycle."""
+        as_downloaded=False
         try:
             ytid = entry.get('id')
-            if not ytid: return
+            if not ytid: return as_downloaded
 
             # 1. Check RAM/Registry (Instant)
             if ytid in self.existing_ids or self.registry.is_downloaded(original_query, ytid):
-                return
+                return as_downloaded
 
             # 2. Check Disk (Instant - No Network)
             # We use prepare_filename on the 'entry' (flat data)
@@ -146,7 +154,7 @@ class Downloader:
                 self.existing_ids.add(ytid)
                 self.registry.add(original_query, ytid)
                 self.registry.save()
-                return # SKIP NOW before calling extract_info
+                return as_downloaded # SKIP NOW before calling extract_info
 
             # 3. NETWORK CALL (Only reached if file does NOT exist on disk)
             logger.log(4, f"   - [Network] Fetching metadata: {ytid}")
@@ -159,11 +167,12 @@ class Downloader:
                     video_url = f"https://www.youtube.com/watch?v={entry['id']}"
                 else:
                     logger.log(2, f"   - Error: Could not determine video URL.{video_url}")
-                    return
+                    return as_downloaded
 
             # Fetch full metadata (needed because of extract_flat)
             video = ydl.extract_info(video_url, download=False)
-            if not video: return
+            as_downloaded=True
+            if not video: return as_downloaded
 
             # Expert-tier metadata extraction
             artist, title = metadata_utils.extract_professional_metadata(video)
@@ -177,7 +186,7 @@ class Downloader:
 
             if os.path.exists(final_file):
                 logger.log(4, f"   - Skipping: '{os.path.basename(final_file)}' already exists.")
-                return
+                return as_downloaded
 
             # Actual Download
             logger.log(4, f"   - Downloading: {artist} - {title}")
@@ -240,6 +249,8 @@ class Downloader:
 
             # Embed everything
             file_processor.embed_metadata(final_file, lyrics=lyrics, ytid=ytid, cover_data=cover_data)
+
+            return as_downloaded
 
         except Exception as e:
             logger.log(2, f"   - Track Error: {e}")
