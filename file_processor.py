@@ -84,7 +84,8 @@ def embed_metadata(file_path, lyrics=None, ytid=None, cover_data=None):
     """Generic M4A metadata embedder."""
     try:
         # Prevent trying to embed in MP4 videos (Mutagen MP4 is for audio containers)
-        if file_path.endswith(".mp4") and config.DOWNLOAD_VIDEO:
+        # We check the file extension directly now
+        if file_path.endswith(".mp4"):
             return False
 
         audio = MP4(file_path)

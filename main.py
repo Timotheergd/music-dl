@@ -56,11 +56,18 @@ def process_existing_library(engine):
     # Initialize cover engine for repairs
     c_engine = cover_engine.CoverEngine()
 
+    # Determine which extensions to scan
+    # If "both", we scan both. If "video", we scan mp4.
+    target_exts = config.get_extensions()
+
     # Walk through all folders and subfolders
     ext = f".{config.AUDIO_FORMAT}"
     for root, dirs, files in os.walk(config.DOWNLOAD_DIR):
         for filename in files:
-            if not filename.endswith(ext): continue
+
+            # Check if file matches ANY of our target extensions
+            if not any(filename.endswith(f".{ext}") for ext in target_exts):
+                continue
 
             base_name = os.path.splitext(filename)[0]
             audio_path = os.path.join(root, filename)

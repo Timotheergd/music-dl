@@ -54,14 +54,22 @@ YTID_KEY = "----:com.apple.iTunes:YTID"
 
 REGISTRY_FILE = ".registry.json"
 
-# File Format
-DOWNLOAD_VIDEO = False  # Set to True to download Video (MP4) instead of Audio (MP3)
+# Download Mode
+# Options: "audio", "video", "both"
+DOWNLOAD_MODE = "both"
+
+# File Formats
 AUDIO_FORMAT = "m4a"
 VIDEO_FORMAT = "mp4"
 
-# Logic helper
-def get_extension():
-    return VIDEO_FORMAT if DOWNLOAD_VIDEO else AUDIO_FORMAT
+# Logic helper (Updated)
+def get_extensions():
+    """Returns a list of extensions to check/download based on mode."""
+    if DOWNLOAD_MODE == "video":
+        return [VIDEO_FORMAT]
+    elif DOWNLOAD_MODE == "both":
+        return [AUDIO_FORMAT, VIDEO_FORMAT]
+    return [AUDIO_FORMAT] # Default to audio
 
 # Image Settings
 IMAGE_SIZE = 600
