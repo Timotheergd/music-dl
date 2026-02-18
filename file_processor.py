@@ -112,3 +112,26 @@ def extract_ytid(file_path):
     except:
         pass
     return None
+
+def has_cover(file_path):
+    """Checks if an M4A file already has embedded cover art."""
+    try:
+        audio = MP4(file_path)
+        return 'covr' in audio
+    except:
+        return False
+
+def remove_embedded_cover(file_path):
+    """Aggressively removes all cover art atoms from an M4A file."""
+    try:
+        audio = MP4(file_path)
+        # M4A covers are stored in the 'covr' key
+        if 'covr' in audio:
+            # We set it to an empty list and then delete the key
+            audio['covr'] = []
+            del audio['covr']
+            audio.save()
+            return True
+    except Exception as e:
+        print(f"   - [FileProcessor] Failed to remove cover: {e}")
+    return False

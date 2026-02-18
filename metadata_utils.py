@@ -41,17 +41,21 @@ def extract_professional_metadata(info):
     return clean_metadata(artist), clean_metadata(title)
 
 def parse_filename_robustly(filename):
-    """Guesses Artist and Title from a filename for library scans."""
     name = os.path.splitext(filename)[0]
 
-    # Try splitting by standard dash
-    match = re.search(r'^(.*?) [-–—|] (.*)$', name)
-    if match:
-        return match.group(1).strip(), match.group(2).strip()
+    # 1. Try to split by common delimiters
+    # We use a regex that looks for a dash surrounded by spaces, which is the standard
+    parts = re.split(r' [-–—|] ', name)
 
-    # Fallback for "Artist-Title"
+    if len(parts) >= 2:
+        # If there are multiple parts, assume the first is Artist, the rest is Title
+        return parts[0].strip(), " ".join(parts[1:]).strip()
+
+    # 2. Fallback: If no spaces around dash, try a raw dash but be careful
     if "-" in name:
         parts = name.split("-")
-        return parts[0].strip(), "-".join(parts[1:]).strip()
+        if len(parts) == 2:
+            return parts[0].strip(), parts[1].strip()
 
+    # 3. No delimiters found
     return "Unknown", name

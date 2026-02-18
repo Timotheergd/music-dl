@@ -12,7 +12,6 @@ USER_AGENT = (
     "Chrome/91.0.4472.124 Safari/537.36"
 )
 
-
 # API Endpoints
 LRCLIB_URL = "https://lrclib.net/api/get"
 NETEASE_SEARCH_URL = "http://music.163.com/api/search/get/web"
@@ -30,6 +29,9 @@ JUNK_KEYWORDS = [
     r'\(Remastered\)', r'\(Live\)', r'\(Video\)', r'Official Music Video',
     r'Official Video', r'VEVO', r'- Topic',
     r'(?i)\bby\b', r'(?i)\bpar\b'
+    r'(?i)\b8\s?bit\b', r'(?i)\barranged\s+by\b', r'(?i)\bperformed\s+by\b',
+    r'(?i)\bft\b', r'(?i)\bfeat\b', r'(?i)\bversion\b', r'(?i)\bost\b',
+    r'(?i)\bsoundtrack\b', r'(?i)\btheme\b', r'\(.*?\)', r'\[.*?\]'
 ]
 
 # Junk Uploaders (The "stereomusicvideo" fix)
@@ -63,3 +65,8 @@ def get_extension():
 IMAGE_SIZE = 600
 IMAGE_QUALITY = 80
 ITUNES_API_URL = "https://itunes.apple.com/search"
+
+# Library Scan Settings
+SKIP_LIBRARY_SCAN = False  # Set to True to skip the entire scan at the end
+REPAIR_LYRICS = False       # Try to find missing .lrc/.srt files
+REPAIR_COVERS = True       # Try to find missing embedded covers or cover.jp
