@@ -44,8 +44,10 @@ JUNK_UPLOADERS = ['vevo', 'official', 'records', 'music', 'video', 'stereo', 'ch
 # 3: WARNING (Lyrics not found, blocked videos)
 # 4: INFO (Standard progress, default)
 # 5: DEBUG (FastSkip details, Registry Sync, internal logic)
-LOG_LEVEL = 5
-LOG_FILE = "debug.log"
+LOG_LEVEL = 4
+ENABLE_LOGGING = True # Master switch
+LOG_SUBDIR = "logs"
+MAX_LOG_FOLDER_BYTES = 1 * 1024 * 1024 # 1MB limit
 
 # Metadata Keys
 YTID_KEY = "----:com.apple.iTunes:YTID"
@@ -68,5 +70,5 @@ ITUNES_API_URL = "https://itunes.apple.com/search"
 
 # Library Scan Settings
 SKIP_LIBRARY_SCAN = False  # Set to True to skip the entire scan at the end
-REPAIR_LYRICS = False       # Try to find missing .lrc/.srt files
+REPAIR_LYRICS = True       # Try to find missing .lrc/.srt files
 REPAIR_COVERS = True       # Try to find missing embedded covers or cover.jp
