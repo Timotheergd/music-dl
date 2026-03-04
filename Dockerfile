@@ -11,7 +11,9 @@ WORKDIR /app
 
 # 4. Dependency Layer (Only rebuilds if you change requirements.txt)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Upgrade pip first, then install requirements with -U (Upgrade) flag
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # 5. Code Layer (Changes frequently - built in < 1 second)
 COPY songs.txt .

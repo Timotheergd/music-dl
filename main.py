@@ -9,6 +9,7 @@ import file_processor
 import registry
 import cover_engine
 from mutagen.mp4 import MP4  # Ensure this is at the top of main.py
+import subprocess
 
 def extract_embedded_lyrics(audio_path):
     """Generic helper to read lyrics from M4A atoms."""
@@ -241,10 +242,31 @@ def parse_song_list(filepath):
 
     return tasks
 
+def update_ytdlp():
+    """Force updates ONLY yt-dlp and its dependencies at runtime."""
+    if not config.AUTO_UPDATE_YTDLP:
+        return
+
+    logger.log(4, "[System] Checking for yt-dlp updates...")
+    try:
+        # -U (Upgrade) targets only the named package
+        # --no-cache-dir ensures we get the absolute latest from PyPI
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install",
+            "-U", "--no-cache-dir", "yt-dlp"
+        ])
+        logger.log(4, "[System] yt-dlp update check complete.")
+    except Exception as e:
+        logger.log(2, f"[System] Failed to update yt-dlp: {e}")
+
+
 def main():
 
     # Setup Logging
     logger.setup()
+
+    # Auto-Update (Must be before Downloader initialization)
+    update_ytdlp()
 
     # Ensure download directory exists
     if not os.path.exists(config.DOWNLOAD_DIR): os.makedirs(config.DOWNLOAD_DIR)

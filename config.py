@@ -86,3 +86,6 @@ ITUNES_API_URL = "https://itunes.apple.com/search"
 SKIP_LIBRARY_SCAN = False  # Set to True to skip the entire scan at the end
 REPAIR_LYRICS = True       # Try to find missing .lrc/.srt files
 REPAIR_COVERS = True       # Try to find missing embedded covers or cover.jp
+
+# Auto-Update
+AUTO_UPDATE_YTDLP = True  # Set to True to check for yt-dlp updates on every run
